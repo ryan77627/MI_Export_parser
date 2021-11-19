@@ -5,7 +5,7 @@ except ImportError:
     quit()
 
 try:
-    from fuzzywuzzy import fuzz
+    from rapidfuzz import fuzz
 except ImportError:
     print("Please install the fuzzywuzzy module")
     quit()
