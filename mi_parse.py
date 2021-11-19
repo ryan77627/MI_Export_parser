@@ -32,6 +32,7 @@ class item:
 def import_items():  # TODO: Parse items to class ONCE, then sort into new lists based on parsed info
     file = input("Please enter file path to MI_EXP file: ")
     igCategories = []
+    counter = 0
     with open(file) as f:
         lines = f.readlines()
         for category in range(0, 50):
@@ -53,13 +54,15 @@ def import_items():  # TODO: Parse items to class ONCE, then sort into new lists
                 if int(entry[8]) == category:
                     object = item(entry[2].strip("\""), i)
                     catItems.append(object)
-                    print(f"added {object.name} for revenue class {category}!")
+                    counter += 1
+                    print(f"Parsed {counter} items from export file...", end='\r')
+                    # print(f"added {object.name} for revenue class {category}!")
             if len(catItems) > 0:
                 # we had some items for this rev group, add to todo
                 igCategories.append(catItems)
 
     # We should have a list with all items in sublists
-
+    print()
     return igCategories
 
 
@@ -109,12 +112,8 @@ def init_sort(igCategories):
         for j in i:
             items.append(j)
 
-    print(f"{len(items)} exist!")
-    sleep(4)
-
     for i in igCategories:
         res = processPool.apply_async(sort_items, (todo, counter_queue, sorted_results))
-        sleep(0.3)
 
     while workers > 0:  # Change this for number of results expected
         status = counter_queue.get()
@@ -124,6 +123,7 @@ def init_sort(igCategories):
             counter += status  # this increments the counter for every item sorted
             progress = "{:.2f}".format((counter / len(items)) * 100)
             print(f"Current Progress: {progress}%", end='\r')
+    print()
 
     processPool.close()
     processPool.join()
