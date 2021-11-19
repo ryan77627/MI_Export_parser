@@ -22,14 +22,14 @@ class item:
     # Price: InfoGenesis Price
     # Inserted: Internal var that gets set when placed in the spreadsheet
 
-    def __init__(self, name, line, category):
+    def __init__(self, name, rep, category):
         self.name = name
         self.inserted = 0
-        self.line = line
+        self.rep = rep
         self.category = category
 
 
-def import_items():  # TODO: Parse items to class ONCE, then sort into new lists based on parsed info
+def import_items():
     file = input("Please enter file path to MI_EXP file: ")
     items = []
     counter = 0
@@ -49,7 +49,7 @@ def import_items():  # TODO: Parse items to class ONCE, then sort into new lists
                 else:
                     entry += char
             entry = [ "{}".format(x) for x in next(csv.reader([entry], delimiter=',', quotechar='"')) ]
-            object = item(entry[2].strip("\""), i, int(entry[8]))
+            object = item(entry[2].strip("\""), entry, int(entry[8]))
             items.append(object)
             counter += 1
             print(f"Parsed {counter} items from export file...", end='\r')
@@ -68,11 +68,11 @@ def split_items(items):
         for item in items:
             if item.category == category:
                 catItems.append(item)
-                counter += 1
-                print(f"Split {counter} items into categories...", end='\r')
         if len(catItems) > 0:
             # We have items to actually add
             igCategories.append(catItems)
+            counter += 1
+        print(f"Split {counter} into categories...", end='\r')
 
     print()
     return igCategories
@@ -134,7 +134,7 @@ def init_sort(igCategories):
         else:
             counter += status  # this increments the counter for every item sorted
             progress = "{:.2f}".format((counter / len(items)) * 100)
-            print(f"Current Progress: {progress}%", end='\r')
+            print(f"Sorting Progress: {progress}%", end='\r')
     print()
 
     processPool.close()
