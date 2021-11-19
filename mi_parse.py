@@ -13,7 +13,6 @@ except ImportError:
 import multiprocessing as mp
 # mp.set_start_method('spawn')
 import csv
-from time import sleep
 
 
 class item:
@@ -23,45 +22,58 @@ class item:
     # Price: InfoGenesis Price
     # Inserted: Internal var that gets set when placed in the spreadsheet
 
-    def __init__(self, name, line):
+    def __init__(self, name, line, category):
         self.name = name
         self.inserted = 0
         self.line = line
+        self.category = category
 
 
 def import_items():  # TODO: Parse items to class ONCE, then sort into new lists based on parsed info
     file = input("Please enter file path to MI_EXP file: ")
-    igCategories = []
+    items = []
     counter = 0
     with open(file) as f:
         lines = f.readlines()
-        for category in range(0, 50):
-            catItems = []
-            for i in range(0, len(lines)):
-                # Split, basic parsing, store into object
-                # Standardize line because of brackets
-                entry = ""
-                for char in lines[i]:
-                    if char == '{':
-                        entry += '"'
-                        entry += char
-                    elif char == '}':
-                        entry += char
-                        entry += '"'
-                    else:
-                        entry += char
-                entry = [ "{}".format(x) for x in next(csv.reader([entry], delimiter=',', quotechar='"')) ]
-                if int(entry[8]) == category:
-                    object = item(entry[2].strip("\""), i)
-                    catItems.append(object)
-                    counter += 1
-                    print(f"Parsed {counter} items from export file...", end='\r')
-                    # print(f"added {object.name} for revenue class {category}!")
-            if len(catItems) > 0:
-                # we had some items for this rev group, add to todo
-                igCategories.append(catItems)
+        for i in range(0, len(lines)):
+            # Split, basic parsing, store into object
+            # Standardize line because of brackets
+            entry = ""
+            for char in lines[i]:
+                if char == '{':
+                    entry += '"'
+                    entry += char
+                elif char == '}':
+                    entry += char
+                    entry += '"'
+                else:
+                    entry += char
+            entry = [ "{}".format(x) for x in next(csv.reader([entry], delimiter=',', quotechar='"')) ]
+            object = item(entry[2].strip("\""), i, int(entry[8]))
+            items.append(object)
+            counter += 1
+            print(f"Parsed {counter} items from export file...", end='\r')
+            # print(f"added {object.name} for revenue class {category}!")
 
-    # We should have a list with all items in sublists
+    # We should have a list of all items with some info
+    print()
+    return items
+
+
+def split_items(items):
+    igCategories = []
+    counter = 0
+    for category in range(0, 50):
+        catItems = []
+        for item in items:
+            if item.category == category:
+                catItems.append(item)
+                counter += 1
+                print(f"Split {counter} items into categories...", end='\r')
+        if len(catItems) > 0:
+            # We have items to actually add
+            igCategories.append(catItems)
+
     print()
     return igCategories
 
@@ -138,9 +150,9 @@ def init_sort(igCategories):
         out.close()
 
 
-
 def main():
-    igCategories = import_items()
+    items = import_items()
+    igCategories = split_items(items)
     init_sort(igCategories)
     # create_spreadsheet()
 
