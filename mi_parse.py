@@ -140,21 +140,81 @@ def init_sort(igCategories):
     processPool.close()
     processPool.join()
 
-    with open("output.txt", "w") as out:
-        # We should have results
-        while not sorted_results.empty():
-            result = sorted_results.get()
-            for item in result:
-                out.write(item.name + '\n')
+    # We should have results
+    while not sorted_results.empty():
+        result = sorted_results.get()
+        for item in result:
+            sorted_list.append(item)
 
-        out.close()
+    return sorted_list
 
+
+##############################################################################################
+# SORTING CODE ABOVE
+# SPREADSHEET CODE BELOW
+##############################################################################################
+
+def create_spreadsheet(items):
+    output_file = openpyxl.Workbook()
+    output = output_file.create_sheet("Item Export")
+    sku_out = output_file.create_sheet("SKU List")
+    output_file.remove(output_file.active)  # Deletes default sheet
+    main_counter = 3
+    sku_counter = 4
+
+    # Initial Formatting Setup
+    output.cell(row = 2, column = 2).value = "UD Item"
+    output.cell(row = 2, column = 3).value = "UD Name"
+    output.cell(row = 2, column = 4).value = "Price"
+    output.cell(row = 2, column = 5).value = "Revenue Category"
+    output.cell(row = 2, column = 6).value = "SKU"
+    sku_out.cell(row = 3, column = 2).value = "UD Item"
+    sku_out.cell(row = 3, column = 3).value = "SKUs Associated"
+
+    for item in items:
+        # Let's first populate the easy things, starting with the item number and name
+        output.cell(row = main_counter, column = 2).value = str(item.rep[1])
+        output.cell(row = main_counter, column = 3).value = item.rep[2]
+
+        # Now to get the price, we will need to do some parsing
+        price_array = item.rep[6].split(",")
+        price = price_array[1].strip("}")
+
+        output.cell(row = main_counter, column = 4).value = price
+
+        # Revenue Category
+        output.cell(row = main_counter, column = 5).value = str(item.category)
+
+        # Now... SKUs. We need a few rules for these and some parsing
+        sku_array = item.rep[13].strip("{}").split(",")
+        #print(item.rep)
+        if len(sku_array) <= 2:
+            # We have one SKU, goes in original sheet
+            sku = sku_array[0]
+            output.cell(row = main_counter, column = 6).value = sku
+        else:
+            # We have more than one SKU, need to use other sheet
+            output.cell(row = main_counter, column = 6).value = "Multiple"
+            # referenced_cell = "=Item Export!$" + openpyxl.utils.get_column_letter(6) + "$" + str(main_counter)
+            sku_out.cell(row = sku_counter, column = 2).value = str(item.rep[1])
+            for sku in range(1, len(sku_array), 2):
+                sku_out.cell(row = sku_counter, column = 3).value = sku
+                sku_counter += 1
+            
+
+        main_counter += 1
+        progress = "{:.0f}".format((main_counter / len(items)) * 100)
+        print(f"{progress}% of sheet created.", end='\r')
+
+    output_file.save("MI_Exp_Converted.xlsx")
+    print()
+    
 
 def main():
     items = import_items()
     igCategories = split_items(items)
-    init_sort(igCategories)
-    # create_spreadsheet()
+    sorted = init_sort(igCategories)
+    create_spreadsheet(sorted)
 
 
 if __name__ == "__main__":
