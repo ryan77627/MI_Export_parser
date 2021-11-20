@@ -1,14 +1,16 @@
+QUIT = 0
+
 try:
     import openpyxl
 except ImportError:
-    print("Please install the openpyxl module")
-    quit()
+    print("Please install the openpyxl module (pip install openpyxl)")
+    QUIT = 1
 
 try:
     from rapidfuzz import fuzz
 except ImportError:
-    print("Please install the fuzzywuzzy module")
-    quit()
+    print("Please install the rapidfuzz module (pip install rapidfuzz)")
+    QUIT = 1
 
 import multiprocessing as mp
 # mp.set_start_method('spawn')
@@ -211,6 +213,8 @@ def create_spreadsheet(items):
     
 
 def main():
+    if QUIT == 1:
+        quit()
     items = import_items()
     igCategories = split_items(items)
     sorted = init_sort(igCategories)
