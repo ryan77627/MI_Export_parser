@@ -15,6 +15,8 @@ except ImportError:
 import multiprocessing as mp
 # mp.set_start_method('spawn')
 import csv
+import re
+orig_filename = ""
 
 
 class item:
@@ -32,16 +34,25 @@ class item:
 
 
 def import_items():
-    file = input("Please enter file path to MI_EXP file: ")
+    global orig_filename
+    orig_filename = input("Please enter file path to MI_EXP file: ")
     items = []
     counter = 0
-    with open(file) as f:
+    with open(orig_filename) as f:
         lines = f.readlines()
         for i in range(0, len(lines)):
             # Split, basic parsing, store into object
             # Standardize line because of brackets
+            # This part handles the sku info
+            try:
+                # So, this isn't guaranteed to have a match, in which case we're going to get an IndexError
+                # for a list that doesn't exist. This basically says "if we have a match, cool. If not, oh well"
+                skuList = re.findall(r"(\{\"(?:.*)\"\})", lines[i])[0]
+                passOne = re.sub(r"(\{\"(?:.*)\"\})", skuList.replace('"', ''), lines[i])
+            except:
+                passOne = lines[i]
             entry = ""
-            for char in lines[i]:
+            for char in passOne:
                 if char == '{':
                     entry += '"'
                     entry += char
@@ -78,6 +89,21 @@ def split_items(items):
 
     print()
     return igCategories
+
+
+def outList(items):
+    '''
+    Short helper function that will output
+    all of the items in a list to a output text file
+    to aid in debugging
+    '''
+
+    with open("output.txt", "w") as f:
+        for item in items:
+            f.write(",".join(item.rep) + "\n")
+
+    print("outList complete!")
+    quit()
 
 
 def sort_items(todo, counter, results):
@@ -188,8 +214,8 @@ def create_spreadsheet(items):
         output.cell(row = main_counter, column = 5).value = str(item.category)
 
         # Now... SKUs. We need a few rules for these and some parsing
-        sku_array = item.rep[13].strip("{}").split(",")
-        #print(item.rep)
+        sku_array = item.rep[14].strip("{}").split(",")
+        # print(item.rep)
         if len(sku_array) <= 2:
             # We have one SKU, goes in original sheet
             sku = sku_array[0]
@@ -199,16 +225,18 @@ def create_spreadsheet(items):
             output.cell(row = main_counter, column = 6).value = "Multiple"
             # referenced_cell = "=Item Export!$" + openpyxl.utils.get_column_letter(6) + "$" + str(main_counter)
             sku_out.cell(row = sku_counter, column = 2).value = str(item.rep[1])
-            for sku in range(1, len(sku_array), 2):
-                sku_out.cell(row = sku_counter, column = 3).value = sku
+            for sku in range(0, len(sku_array), 2):
+                sku_out.cell(row = sku_counter, column = 3).value = sku_array[sku]
                 sku_counter += 1
             
-
         main_counter += 1
         progress = "{:.0f}".format((main_counter / len(items)) * 100)
         print(f"{progress}% of sheet created.", end='\r')
 
-    output_file.save("MI_Exp_Converted.xlsx")
+    # The sheet should be filled at this point, let's format it as a table now!
+    tab = openpyxl.worksheet.table.Table(displayName="test", ref="B2:F" + str(output.max_row))
+    output.add_table(tab)
+    output_file.save("MI_Exp_Converted_" + orig_filename.split("_")[2].strip(".txt") + ".xlsx")
     print()
     
 
@@ -216,6 +244,7 @@ def main():
     if QUIT == 1:
         quit()
     items = import_items()
+    # outList(items)
     igCategories = split_items(items)
     sorted = init_sort(igCategories)
     create_spreadsheet(sorted)
