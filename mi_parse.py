@@ -85,7 +85,7 @@ def split_items(items):
             # We have items to actually add
             igCategories.append(catItems)
             counter += 1
-        print(f"Split {counter} into categories...", end='\r')
+        print(f"Split into {counter} categories...", end='\r')
 
     print()
     return igCategories
@@ -132,6 +132,10 @@ def sort_items(todo, counter, results):
     return
 
 
+def getCategory(item):
+    return item.category
+
+
 def init_sort(igCategories):
     # This actually spawns the sort threads (processes in this case)
     sorted_list = []
@@ -173,6 +177,10 @@ def init_sort(igCategories):
         result = sorted_results.get()
         for item in result:
             sorted_list.append(item)
+
+    # sorted_list.sort(key=getCategory)
+        
+    
 
     return sorted_list
 
@@ -223,19 +231,38 @@ def create_spreadsheet(items):
         else:
             # We have more than one SKU, need to use other sheet
             output.cell(row = main_counter, column = 6).value = "Multiple"
-            # referenced_cell = "=Item Export!$" + openpyxl.utils.get_column_letter(6) + "$" + str(main_counter)
+            # Let's make a hyperlink between the two cells so we can reference them easily
+            output.cell(row = main_counter, column = 6).hyperlink = openpyxl.worksheet.hyperlink.Hyperlink(ref="F" + str(main_counter), location="'SKU List'!B" + str(sku_counter), tooltip=None, display='Multiple', id=None)
+            output.cell(row = main_counter, column = 6).font = openpyxl.styles.Font(color="000000FF", underline='single')
             sku_out.cell(row = sku_counter, column = 2).value = str(item.rep[1])
+            sku_out.cell(row = sku_counter, column = 2).hyperlink = openpyxl.worksheet.hyperlink.Hyperlink(ref="B" + str(sku_counter), location="'Item Export'!F" + str(main_counter), tooltip=None, display=str(item.rep[1]), id=None)
+            sku_out.cell(row = sku_counter, column = 2).font = openpyxl.styles.Font(color="000000FF", underline='single')
             for sku in range(0, len(sku_array), 2):
                 sku_out.cell(row = sku_counter, column = 3).value = sku_array[sku]
                 sku_counter += 1
+            sku_counter += 1  # Adds a blank row after an item, adds some separation between items
             
         main_counter += 1
         progress = "{:.0f}".format((main_counter / len(items)) * 100)
         print(f"{progress}% of sheet created.", end='\r')
 
     # The sheet should be filled at this point, let's format it as a table now!
-    tab = openpyxl.worksheet.table.Table(displayName="test", ref="B2:F" + str(output.max_row))
-    output.add_table(tab)
+    defaultStyle = openpyxl.worksheet.table.TableStyleInfo(name='TableStyleLight1', showFirstColumn=False, showLastColumn=False, showColumnStripes=False, showRowStripes=True)
+    tab1 = openpyxl.worksheet.table.Table(displayName="Items", ref="B2:F" + str(output.max_row))
+    tab2 = openpyxl.worksheet.table.Table(displayName="skus", ref="B3:C" + str(sku_out.max_row))
+    tab1.tableStyleInfo = defaultStyle
+    tab2.tableStyleInfo = defaultStyle
+    output.add_table(tab1)
+    sku_out.add_table(tab2)
+    
+    # Let's resize the columns so we don't need to do that in excel
+    for column_cells in output.columns:
+        length = max(len(cell.value or "") for cell in column_cells) + 2.65
+        output.column_dimensions[openpyxl.utils.get_column_letter(column_cells[0].column)].width = length
+    for column_cells in sku_out.columns:
+        length = max(len(cell.value or "") for cell in column_cells) + 2.65
+        sku_out.column_dimensions[openpyxl.utils.get_column_letter(column_cells[0].column)].width = length
+        
     output_file.save("MI_Exp_Converted_" + orig_filename.split("_")[2].strip(".txt") + ".xlsx")
     print()
     
